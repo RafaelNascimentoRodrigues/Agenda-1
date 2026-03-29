@@ -1,1 +1,103 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Agenda Pro++</title>
+  <link rel="manifest" href="manifest.json">
+  <style>
+    body{font-family:Arial;margin:0;background:#0f172a;color:#e2e8f0}
+    header{padding:15px;text-align:center;background:#1e293b;font-size:20px}
+    .container{max-width:700px;margin:20px auto;padding:20px;background:#1e293b;border-radius:12px}
+    input,select,button{width:100%;padding:10px;margin:5px 0;border-radius:6px;border:none}
+    button{background:#3b82f6;color:white;cursor:pointer}
+    .row{display:flex;gap:5px}
+    .task{background:#0f172a;padding:12px;border-radius:8px;margin:10px 0}
+    .task-top{display:flex;justify-content:space-between;align-items:center}
+    .done{text-decoration:line-through;opacity:.6}
+    .late{border-left:4px solid red}
+    .alta{border-left:4px solid red}
+    .media{border-left:4px solid orange}
+    .baixa{border-left:4px solid green}
+    .filters{display:flex;gap:5px}
+    .filters button{flex:1}
+  </style>
+</head>
+<body>
+<header>Agenda Pro++</header>
+<div class="container">
+  <input id="titulo" placeholder="Título">
+  <input type="datetime-local" id="data">
+  <select id="prioridade">
+    <option value="baixa">Baixa</option>
+    <option value="media">Média</option>
+    <option value="alta">Alta</option>
+  </select>
+  <button onclick="addTask()">Adicionar</button>
 
+  <div class="filters">
+    <button onclick="setFilter('todas')">Todas</button>
+    <button onclick="setFilter('pendente')">Pendentes</button>
+    <button onclick="setFilter('concluida')">Concluídas</button>
+  </div>
+
+  <div class="row">
+    <button onclick="exportar()">Exportar</button>
+    <input type="file" onchange="importar(event)">
+  </div>
+
+  <div id="tasks"></div>
+</div>
+
+<script>
+let tasks = JSON.parse(localStorage.getItem('tasks')) || [];
+let filter='todas';
+
+function save(){localStorage.setItem('tasks',JSON.stringify(tasks));}
+function setFilter(f){filter=f;render();}
+
+function addTask(){
+  const titulo=document.getElementById('titulo').value.trim();
+  const data=document.getElementById('data').value;
+  const prioridade=document.getElementById('prioridade').value;
+
+  if(!titulo){alert('Título obrigatório');return;}
+
+  tasks.push({id:Date.now(),titulo,data,prioridade,done:false,createdAt:new Date()});
+  save();render();
+  document.getElementById('titulo').value='';
+}
+
+function toggle(id){const t=tasks.find(t=>t.id===id);t.done=!t.done;save();render();}
+function removeTask(id){tasks=tasks.filter(t=>t.id!==id);save();render();}
+function editTask(id){const t=tasks.find(t=>t.id===id);const n=prompt('Editar',t.titulo);if(n){t.titulo=n;save();render();}}
+
+function ordenar(lista){
+  return lista.sort((a,b)=>{
+    const p={alta:1,media:2,baixa:3};
+    if(a.prioridade!==b.prioridade)return p[a.prioridade]-p[b.prioridade];
+    return new Date(a.data||0)-new Date(b.data||0);
+  });
+}
+
+function render(){
+  const c=document.getElementById('tasks');c.innerHTML='';
+  let lista=ordenar([...tasks]);
+
+  lista.forEach(t=>{
+    if(filter==='pendente'&&t.done)return;
+    if(filter==='concluida'&&!t.done)return;
+
+    const div=document.createElement('div');
+    div.className=`task ${t.prioridade}`;
+
+    if(t.data&&new Date(t.data)<new Date()&&!t.done)div.classList.add('late');
+
+    const top=document.createElement('div');top.className='task-top';
+
+    const title=document.createElement('span');title.textContent=t.titulo;
+    if(t.done)title.classList.add('done');
+    title.onclick=()=>toggle(t.id);
+    title.ondblclick=()=>editTask(t.id);
+
+    const del=document.createElement('button');del.textContent
